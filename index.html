@@ -80,6 +80,102 @@ fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api
       document.getElementById("pressBox").innerHTML = "Pressione: " + f.field3 + " hPa";
   });
 
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Stazione Meteo Giovanni</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body {
+        background: #e8dfc8; /* beige caldo stile strumentazione d’epoca */
+        font-family: Georgia, serif;
+        color: #3a2f1b;
+        text-align: center;
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 36px;
+        margin-bottom: 10px;
+        color: #4a3b24;
+        text-shadow: 1px 1px 2px #c8b89a;
+    }
+
+    .indicator {
+        display: inline-block;
+        background: #fdfaf3;
+        padding: 20px;
+        margin: 10px;
+        border: 2px solid #8b6f47;
+        border-radius: 8px;
+        width: 200px;
+        font-size: 22px;
+        box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+    }
+
+    button {
+        background: #8b6f47;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        margin: 10px;
+        font-size: 18px;
+        border-radius: 6px;
+        cursor: pointer;
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    button:hover {
+        background: #6e5838;
+    }
+
+    canvas {
+        background: #fdfaf3;
+        border: 2px solid #8b6f47;
+        border-radius: 8px;
+        margin-top: 20px;
+        box-shadow: 3px 3px 8px rgba(0,0,0,0.25);
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Stazione Meteo Giovanni</h1>
+
+<!-- Indicatori -->
+<div class="indicator" id="tempBox">Temperatura: -- °C</div>
+<div class="indicator" id="humBox">Umidità: -- %</div>
+<div class="indicator" id="pressBox">Pressione: -- hPa</div>
+
+<!-- Pulsanti -->
+<h2>Andamento</h2>
+<button onclick="loadData('24h')">Ultime 24 ore</button>
+<button onclick="loadData('7d')">Ultima settimana</button>
+
+<!-- Grafico -->
+<canvas id="mainChart" width="700" height="350"></canvas>
+
+<script>
+const channelID = 3244940;
+const apiKey = "R8YR426S1GDRCRS1";
+
+let chart;
+
+// ----------------------
+// Indicatori attuali
+// ----------------------
+fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api_key=${apiKey}`)
+  .then(r => r.json())
+  .then(data => {
+      const f = data.feeds[0];
+      document.getElementById("tempBox").innerHTML = "Temperatura: " + f.field1 + " °C";
+      document.getElementById("humBox").innerHTML = "Umidità: " + f.field2 + " %";
+      document.getElementById("pressBox").innerHTML = "Pressione: " + f.field3 + " hPa";
+  });
+
 // ----------------------
 // Funzione per caricare dati e aggiornare grafico
 // ----------------------
@@ -107,15 +203,61 @@ function loadData(period) {
               data: {
                   labels: labels,
                   datasets: [
-                      { label: "Temperatura (°C)", data: temp, borderColor: "#8b6f47", fill: false },
-                      { label: "Umidità (%)", data: hum, borderColor: "#3a2f1b", fill: false },
-                      { label: "Pressione (hPa)", data: press, borderColor: "#b33a3a", fill: false }
+                      {
+                          label: "Temperatura (°C)",
+                          data: temp,
+                          borderColor: "#b85c38",
+                          backgroundColor: "rgba(184,92,56,0.2)",
+                          borderWidth: 2,
+                          tension: 0.35, /* linee morbide */
+                          yAxisID: 'tempAxis'
+                      },
+                      {
+                          label: "Umidità (%)",
+                          data: hum,
+                          borderColor: "#3a2f1b",
+                          backgroundColor: "rgba(58,47,27,0.2)",
+                          borderWidth: 2,
+                          tension: 0.35,
+                          yAxisID: 'humAxis'
+                      },
+                      {
+                          label: "Pressione (hPa)",
+                          data: press,
+                          borderColor: "#6a1b1b",
+                          backgroundColor: "rgba(106,27,27,0.2)",
+                          borderWidth: 2,
+                          tension: 0.35,
+                          yAxisID: 'pressAxis'
+                      }
                   ]
               },
               options: {
                   responsive: true,
                   scales: {
-                      x: { display: false }
+                      x: { display: false },
+
+                      tempAxis: {
+                          type: 'linear',
+                          position: 'left',
+                          title: { display: true, text: '°C' },
+                          grid: { drawOnChartArea: false }
+                      },
+
+                      humAxis: {
+                          type: 'linear',
+                          position: 'right',
+                          title: { display: true, text: '%' },
+                          grid: { drawOnChartArea: false }
+                      },
+
+                      pressAxis: {
+                          type: 'linear',
+                          position: 'right',
+                          offset: true,
+                          title: { display: true, text: 'hPa' },
+                          grid: { drawOnChartArea: false }
+                      }
                   }
               }
           });
