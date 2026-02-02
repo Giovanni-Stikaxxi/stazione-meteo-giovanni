@@ -18,7 +18,6 @@
         padding: 20px;
     }
 
-    /* HEADER CON LOGO A SINISTRA */
     #header {
         display: flex;
         justify-content: center;
@@ -39,7 +38,6 @@
         text-shadow: 1px 1px 2px #c8b89a;
     }
 
-    /* INDICATORI SU UNA SOLA LINEA */
     #indicatorsRow {
         display: flex;
         justify-content: center;
@@ -59,7 +57,6 @@
         box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
     }
 
-    /* BADGE VINTAGE PER DATA/ORA */
     #lastUpdateBadge {
         display: inline-flex;
         align-items: center;
@@ -74,7 +71,6 @@
         box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
     }
 
-    /* ICONA OROLOGIO */
     .clockIcon {
         width: 22px;
         height: 22px;
@@ -109,20 +105,17 @@
 
 <body>
 
-<!-- HEADER -->
 <div id="header">
     <img id="logo" src="logo.png">
     <h1>Stazione Meteo Giovanni</h1>
 </div>
 
-<!-- INDICATORI -->
 <div id="indicatorsRow">
     <div class="indicator" id="tempBox">Temperatura: -- °C</div>
     <div class="indicator" id="humBox">Umidità: -- %</div>
     <div class="indicator" id="pressBox">Pressione: -- hPa</div>
 </div>
 
-<!-- BADGE ULTIMO RILEVAMENTO -->
 <div id="lastUpdateBadge">
     <svg class="clockIcon" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="#8b6f47" stroke-width="2" fill="none"/>
@@ -132,12 +125,10 @@
     <span id="lastUpdateText">Ultimo rilevamento: --</span>
 </div>
 
-<!-- PULSANTI -->
 <h2>Andamento</h2>
-<button onclick="loadData('24h')">Ultime 24 ore</button>
+<button onclick="loadData('48h')">Ultime 48 ore</button>
 <button onclick="loadData('7d')">Ultima settimana</button>
 
-<!-- GRAFICO -->
 <canvas id="mainChart" width="700" height="350"></canvas>
 
 <script>
@@ -146,9 +137,6 @@ const apiKey = "R8YR426S1GDRCRS1";
 
 let chart;
 
-// ----------------------
-// Indicatori attuali + data/ora
-// ----------------------
 fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api_key=${apiKey}`)
   .then(r => r.json())
   .then(data => {
@@ -170,16 +158,13 @@ fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api
       document.getElementById("lastUpdateText").innerHTML = "Ultimo rilevamento: " + formatted;
   });
 
-// ----------------------
-// Grafico con round=60
-// ----------------------
 function loadData(period) {
     let url = "";
 
-    if (period === "24h") {
-        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=1&round=60&api_key=${apiKey}`;
+    if (period === "48h") {
+        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=2&average=60&api_key=${apiKey}`;
     } else {
-        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=7&round=60&api_key=${apiKey}`;
+        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=8&average=60&api_key=${apiKey}`;
     }
 
     fetch(url)
@@ -255,8 +240,7 @@ function loadData(period) {
       });
 }
 
-// Carica di default le ultime 24 ore
-loadData("24h");
+loadData("48h");
 </script>
 
 </body>
