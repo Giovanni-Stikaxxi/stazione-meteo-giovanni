@@ -47,6 +47,28 @@
         box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
     }
 
+    /* BADGE VINTAGE PER DATA/ORA */
+    #lastUpdateBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fdfaf3;
+        border: 2px solid #8b6f47;
+        border-radius: 20px;
+        padding: 8px 16px;
+        margin-top: 5px;
+        font-size: 18px;
+        color: #4a3b24;
+        box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+    }
+
+    /* ICONA OROLOGIO STILE STRUMENTAZIONE */
+    .clockIcon {
+        width: 22px;
+        height: 22px;
+        filter: sepia(60%);
+    }
+
     button {
         background: #8b6f47;
         color: white;
@@ -86,6 +108,17 @@
 <div class="indicator" id="humBox">Umidità: -- %</div>
 <div class="indicator" id="pressBox">Pressione: -- hPa</div>
 
+<!-- BADGE DATA/ORA -->
+<div id="lastUpdateBadge">
+    <!-- Icona orologio SVG -->
+    <svg class="clockIcon" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="#8b6f47" stroke-width="2" fill="none"/>
+        <line x1="12" y1="12" x2="12" y2="7" stroke="#8b6f47" stroke-width="2"/>
+        <line x1="12" y1="12" x2="16" y2="12" stroke="#8b6f47" stroke-width="2"/>
+    </svg>
+    <span id="lastUpdateText">Ultimo rilevamento: --</span>
+</div>
+
 <!-- Pulsanti -->
 <h2>Andamento</h2>
 <button onclick="loadData('24h')">Ultime 24 ore</button>
@@ -101,19 +134,32 @@ const apiKey = "R8YR426S1GDRCRS1";
 let chart;
 
 // ----------------------
-// Indicatori attuali
+// Indicatori attuali + data/ora
 // ----------------------
 fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api_key=${apiKey}`)
   .then(r => r.json())
   .then(data => {
       const f = data.feeds[0];
+
       document.getElementById("tempBox").innerHTML = "Temperatura: " + f.field1 + " °C";
       document.getElementById("humBox").innerHTML = "Umidità: " + f.field2 + " %";
       document.getElementById("pressBox").innerHTML = "Pressione: " + f.field3 + " hPa";
+
+      // Formattazione data/ora
+      const dt = new Date(f.created_at);
+      const formatted = dt.toLocaleString("it-IT", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+      });
+
+      document.getElementById("lastUpdateText").innerHTML = "Ultimo rilevamento: " + formatted;
   });
 
 // ----------------------
-// Funzione per caricare dati e aggiornare grafico
+// Grafico con campionamento orario
 // ----------------------
 function loadData(period) {
     let url = "";
