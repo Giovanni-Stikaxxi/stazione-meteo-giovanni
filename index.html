@@ -35,11 +35,19 @@
         text-shadow: 1px 1px 2px #c8b89a;
     }
 
+    /* INDICATORI SU UNA SOLA LINEA */
+    #indicatorsRow {
+        display: flex;
+        justify-content: center;
+        align-items: stretch;
+        gap: 10px;
+        flex-wrap: nowrap;
+        margin-bottom: 10px;
+    }
+
     .indicator {
-        display: inline-block;
         background: #fdfaf3;
         padding: 20px;
-        margin: 10px;
         border: 2px solid #8b6f47;
         border-radius: 8px;
         width: 200px;
@@ -103,14 +111,15 @@
     <h1>Stazione Meteo Giovanni</h1>
 </div>
 
-<!-- Indicatori -->
-<div class="indicator" id="tempBox">Temperatura: -- °C</div>
-<div class="indicator" id="humBox">Umidità: -- %</div>
-<div class="indicator" id="pressBox">Pressione: -- hPa</div>
+<!-- INDICATORI SU UNA SOLA LINEA -->
+<div id="indicatorsRow">
+    <div class="indicator" id="tempBox">Temperatura: -- °C</div>
+    <div class="indicator" id="humBox">Umidità: -- %</div>
+    <div class="indicator" id="pressBox">Pressione: -- hPa</div>
+</div>
 
 <!-- BADGE DATA/ORA -->
 <div id="lastUpdateBadge">
-    <!-- Icona orologio SVG -->
     <svg class="clockIcon" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="#8b6f47" stroke-width="2" fill="none"/>
         <line x1="12" y1="12" x2="12" y2="7" stroke="#8b6f47" stroke-width="2"/>
@@ -145,7 +154,6 @@ fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api
       document.getElementById("humBox").innerHTML = "Umidità: " + f.field2 + " %";
       document.getElementById("pressBox").innerHTML = "Pressione: " + f.field3 + " hPa";
 
-      // Formattazione data/ora
       const dt = new Date(f.created_at);
       const formatted = dt.toLocaleString("it-IT", {
           day: "2-digit",
@@ -159,15 +167,15 @@ fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api
   });
 
 // ----------------------
-// Grafico con campionamento orario
+// Grafico con round=60
 // ----------------------
 function loadData(period) {
     let url = "";
 
     if (period === "24h") {
-        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=1&average=60&api_key=${apiKey}`;
+        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=1&round=60&api_key=${apiKey}`;
     } else {
-        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=7&average=60&api_key=${apiKey}`;
+        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=7&round=60&api_key=${apiKey}`;
     }
 
     fetch(url)
