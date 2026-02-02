@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Stazione Meteo Giovanni</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body {
+        background: #f4f1e3;
+        font-family: Georgia, serif;
+        color: #3a2f1b;
+        text-align: center;
+        padding: 20px;
+    }
+    .indicator {
+        display: inline-block;
+        background: #fff;
+        padding: 20px;
+        margin: 10px;
+        border: 2px solid #8b6f47;
+        border-radius: 8px;
+        width: 200px;
+        font-size: 22px;
+    }
+    button {
+        background: #8b6f47;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        margin: 10px;
+        font-size: 18px;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    button:hover {
+        background: #6e5838;
+    }
+    canvas {
+        background: #fff;
+        border: 2px solid #8b6f47;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Stazione Meteo Giovanni</h1>
+
+<!-- Indicatori -->
+<div class="indicator" id="tempBox">Temperatura: -- °C</div>
+<div class="indicator" id="humBox">Umidità: -- %</div>
+<div class="indicator" id="pressBox">Pressione: -- hPa</div>
+
+<!-- Pulsanti -->
+<h2>Andamento</h2>
+<button onclick="loadData('24h')">Ultime 24 ore</button>
+<button onclick="loadData('7d')">Ultima settimana</button>
+
+<!-- Grafico -->
+<canvas id="mainChart" width="700" height="350"></canvas>
+
+<script>
+const channelID = 3244940;
+const apiKey = "R8YR426S1GDRCRS1";
+
+let chart;
+
+// ----------------------
+// Indicatori attuali
+// ----------------------
+fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api_key=${apiKey}`)
+  .then(r => r.json())
+  .then(data => {
+      const f = data.feeds[0];
+      document.getElementById("tempBox").innerHTML = "Temperatura: " + f.field1 + " °C";
+      document.getElementById("humBox").innerHTML = "Umidità: " + f.field2 + " %";
+      document.getElementById("pressBox").innerHTML = "Pressione: " + f.field3 + " hPa";
+  });
+
+// ----------------------
+// Funzione per caricare dati e aggiornare grafico
+// ----------------------
+function loadData(period) {
+    let url = "";
+
+    if (period === "24h") {
+        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=1&api_key=${apiKey}`;
+    } else {
+        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=7&api_key=${apiKey}`;
+    }
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+          const labels = data.feeds.map(f => f.created_at);
+          const temp = data.feeds.map(f => f.field1);
+          const hum = data.feeds.map(f => f.field2);
+          const press = data.feeds.map(f => f.field3);
+
+          if (chart) chart.destroy();
+
+          chart = new Chart(document.getElementById("mainChart"), {
+              type: 'line',
+              data: {
+                  labels: labels,
+                  datasets: [
+                      { label: "Temperatura (°C)", data: temp, borderColor: "#8b6f47", fill: false },
+                      { label: "Umidità (%)", data: hum, borderColor: "#3a2f1b", fill: false },
+                      { label: "Pressione (hPa)", data: press, borderColor: "#b33a3a", fill: false }
+                  ]
+              },
+              options: {
+                  responsive: true,
+                  scales: {
+                      x: { display: false }
+                  }
+              }
+          });
+      });
+}
+
+// Car
