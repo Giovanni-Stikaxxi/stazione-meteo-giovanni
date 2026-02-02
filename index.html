@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Stazione Meteo Giovanni</title>
 
+<!-- ICONA APP iPHONE -->
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -73,7 +74,7 @@
         box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
     }
 
-    /* ICONA OROLOGIO STILE STRUMENTAZIONE */
+    /* ICONA OROLOGIO */
     .clockIcon {
         width: 22px;
         height: 22px;
@@ -108,20 +109,20 @@
 
 <body>
 
-<!-- HEADER CON LOGO A SINISTRA -->
+<!-- HEADER -->
 <div id="header">
     <img id="logo" src="logo.png">
     <h1>Stazione Meteo Giovanni</h1>
 </div>
 
-<!-- INDICATORI SU UNA SOLA LINEA -->
+<!-- INDICATORI -->
 <div id="indicatorsRow">
     <div class="indicator" id="tempBox">Temperatura: -- °C</div>
     <div class="indicator" id="humBox">Umidità: -- %</div>
     <div class="indicator" id="pressBox">Pressione: -- hPa</div>
 </div>
 
-<!-- BADGE DATA/ORA -->
+<!-- BADGE ULTIMO RILEVAMENTO -->
 <div id="lastUpdateBadge">
     <svg class="clockIcon" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="#8b6f47" stroke-width="2" fill="none"/>
@@ -131,12 +132,12 @@
     <span id="lastUpdateText">Ultimo rilevamento: --</span>
 </div>
 
-<!-- Pulsanti -->
+<!-- PULSANTI -->
 <h2>Andamento</h2>
 <button onclick="loadData('24h')">Ultime 24 ore</button>
 <button onclick="loadData('7d')">Ultima settimana</button>
 
-<!-- Grafico -->
+<!-- GRAFICO -->
 <canvas id="mainChart" width="700" height="350"></canvas>
 
 <script>
@@ -260,4 +261,3 @@ loadData("24h");
 
 </body>
 </html>
-
