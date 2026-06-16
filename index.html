@@ -2,246 +2,74 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Stazione Meteo Giovanni</title>
 
-<!-- ICONA APP iPHONE -->
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- Icona app -->
+<link rel="apple-touch-icon" href="icon.png">
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Modalità app a schermo intero -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 
 <style>
     body {
-        background: #e8dfc8;
-        font-family: Georgia, serif;
-        color: #3a2f1b;
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #f2f2f7;
         text-align: center;
-        padding: 20px;
-    }
-
-    #header {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 20px;
-        margin-bottom: 20px;
-    }
-
-    #logo {
-        width: 120px;
-        filter: sepia(40%);
+        padding-top: 40px;
     }
 
     h1 {
-        font-size: 36px;
-        margin: 0;
-        color: #4a3b24;
-        text-shadow: 1px 1px 2px #c8b89a;
+        font-size: 28px;
+        margin-bottom: 20px;
     }
 
-    #indicatorsRow {
-        display: flex;
-        justify-content: center;
-        align-items: stretch;
-        gap: 10px;
-        flex-wrap: nowrap;
-        margin-bottom: 10px;
-    }
-
-    .indicator {
-        background: #fdfaf3;
-        padding: 20px;
-        border: 2px solid #8b6f47;
-        border-radius: 8px;
-        width: 200px;
-        font-size: 22px;
-        box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-    }
-
-    #lastUpdateBadge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: #fdfaf3;
-        border: 2px solid #8b6f47;
+    .card {
+        background: white;
+        margin: 20px auto;
+        padding: 25px;
+        width: 80%;
+        max-width: 350px;
         border-radius: 20px;
-        padding: 8px 16px;
-        margin-top: 5px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .value {
+        font-size: 40px;
+        font-weight: 600;
+        margin-top: 10px;
+    }
+
+    .label {
         font-size: 18px;
-        color: #4a3b24;
-        box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-    }
-
-    .clockIcon {
-        width: 22px;
-        height: 22px;
-        filter: sepia(60%);
-    }
-
-    button {
-        background: #8b6f47;
-        color: white;
-        border: none;
-        padding: 12px 20px;
-        margin: 10px;
-        font-size: 18px;
-        border-radius: 6px;
-        cursor: pointer;
-        box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    }
-
-    button:hover {
-        background: #6e5838;
-    }
-
-    canvas {
-        background: #fdfaf3;
-        border: 2px solid #8b6f47;
-        border-radius: 8px;
-        margin-top: 20px;
-        box-shadow: 3px 3px 8px rgba(0,0,0,0.25);
+        color: #666;
     }
 </style>
 </head>
 
 <body>
 
-<div id="header">
-    <img id="logo" src="logo.png">
-    <h1>Stazione Meteo Giovanni</h1>
+<h1>Stazione Meteo Giovanni</h1>
+
+<div class="card">
+    <div class="label">Temperatura</div>
+    <div id="temp" class="value">-- °C</div>
 </div>
 
-<div id="indicatorsRow">
-    <div class="indicator" id="tempBox">Temperatura: -- °C</div>
-    <div class="indicator" id="humBox">Umidità: -- %</div>
-    <div class="indicator" id="pressBox">Pressione: -- hPa</div>
+<div class="card">
+    <div class="label">Umidità</div>
+    <div id="hum" class="value">-- %</div>
 </div>
 
-<div id="lastUpdateBadge">
-    <svg class="clockIcon" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" stroke="#8b6f47" stroke-width="2" fill="none"/>
-        <line x1="12" y1="12" x2="12" y2="7" stroke="#8b6f47" stroke-width="2"/>
-        <line x1="12" y1="12" x2="16" y2="12" stroke="#8b6f47" stroke-width="2"/>
-    </svg>
-    <span id="lastUpdateText">Ultimo rilevamento: --</span>
+<div class="card">
+    <div class="label">Pressione</div>
+    <div id="press" class="value">-- hPa</div>
 </div>
 
-<h2>Andamento</h2>
-<button onclick="loadData('48h')">Ultime 48 ore</button>
-<button onclick="loadData('7d')">Ultima settimana</button>
-
-<canvas id="mainChart" width="700" height="350"></canvas>
-
-<script>
-const channelID = 3244940;
-const apiKey = "R8YR426S1GDRCRS1";
-
-let chart;
-
-fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?results=1&api_key=${apiKey}`)
-  .then(r => r.json())
-  .then(data => {
-      const f = data.feeds[0];
-
-      document.getElementById("tempBox").innerHTML = "Temperatura: " + f.field1 + " °C";
-      document.getElementById("humBox").innerHTML = "Umidità: " + f.field2 + " %";
-      document.getElementById("pressBox").innerHTML = "Pressione: " + f.field3 + " hPa";
-
-      const dt = new Date(f.created_at);
-      const formatted = dt.toLocaleString("it-IT", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit"
-      });
-
-      document.getElementById("lastUpdateText").innerHTML = "Ultimo rilevamento: " + formatted;
-  });
-
-function loadData(period) {
-    let url = "";
-
-    if (period === "48h") {
-        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=2&average=60&api_key=${apiKey}`;
-    } else {
-        url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?days=8&average=60&api_key=${apiKey}`;
-    }
-
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-          const labels = data.feeds.map(f => f.created_at);
-          const temp = data.feeds.map(f => f.field1);
-          const hum = data.feeds.map(f => f.field2);
-          const press = data.feeds.map(f => f.field3);
-
-          if (chart) chart.destroy();
-
-          chart = new Chart(document.getElementById("mainChart"), {
-              type: 'line',
-              data: {
-                  labels: labels,
-                  datasets: [
-                      {
-                          label: "Temperatura (°C)",
-                          data: temp,
-                          borderColor: "#b85c38",
-                          borderWidth: 1.5,
-                          tension: 0.4,
-                          yAxisID: 'tempAxis'
-                      },
-                      {
-                          label: "Umidità (%)",
-                          data: hum,
-                          borderColor: "#3a2f1b",
-                          borderWidth: 1.5,
-                          tension: 0.4,
-                          yAxisID: 'humAxis'
-                      },
-                      {
-                          label: "Pressione (hPa)",
-                          data: press,
-                          borderColor: "#6a1b1b",
-                          borderWidth: 1.5,
-                          tension: 0.4,
-                          yAxisID: 'pressAxis'
-                      }
-                  ]
-              },
-              options: {
-                  responsive: true,
-                  scales: {
-                      x: { display: false },
-
-                      tempAxis: {
-                          type: 'linear',
-                          position: 'left',
-                          title: { display: true, text: '°C' },
-                          grid: { drawOnChartArea: false }
-                      },
-
-                      humAxis: {
-                          type: 'linear',
-                          position: 'right',
-                          title: { display: true, text: '%' },
-                          grid: { drawOnChartArea: false }
-                      },
-
-                      pressAxis: {
-                          type: 'linear',
-                          position: 'right',
-                          offset: true,
-                          title: { display: true, text: 'hPa' },
-                          grid: { drawOnChartArea: false }
-                      }
-                  }
-              }
-          });
-      });
-}
-
-loadData("48h");
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>
