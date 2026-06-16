@@ -1,145 +1,123 @@
-const FIREBASE_URL =
-  "https://stazione-meteo-giovanni-default-rtdb.europe-west1.firebasedatabase.app/meteo.json";
+const FIREBASE_BASE =
+  "https://stazione-meteo-giovanni-default-rtdb.europe-west1.firebasedatabase.app";
 
-// Storico 48 ore (96 punti)
-let labels48 = [];
-let temp48 = [];
-let hum48 = [];
-let press48 = [];
+// URL valori attuali
+const URL_ATTUALE = FIREBASE_BASE + "/meteo.json";
 
-// Storico 7 giorni (336 punti)
-let labels7 = [];
-let temp7 = [];
-let hum7 = [];
-let press7 = [];
+// URL storico
+const URL_STORICO = FIREBASE_BASE + "/storico.json";
 
-// Ultimo salvataggio
-let lastSaveTime = 0;
+// Grafico
+let chart;
 
-// Grafico unico
-const ctx = document.getElementById("meteoChart");
-const meteoChart = new Chart(ctx, {
-  type: "line",
-  data: {
-    labels: labels48,
-    datasets: [
-      {
-        label: "Temperatura (°C)",
-        data: temp48,
-        borderColor: "red",
-        borderWidth: 2,
-        tension: 0.3,
-      },
-      {
-        label: "Umidità (%)",
-        data: hum48,
-        borderColor: "blue",
-        borderWidth: 2,
-        tension: 0.3,
-      },
-      {
-        label: "Pressione (hPa)",
-        data: press48,
-        borderColor: "green",
-        borderWidth: 2,
-        tension: 0.3,
-      },
-    ],
-  },
-  options: {
-    layout: {
-      padding: { top: 5, bottom: 5, left: 0, right: 0 },
-    },
-    plugins: {
-      legend: {
-        labels: {
-          boxWidth: 10,
-          font: { size: 11 },
-        },
-      },
-    },
-    scales: {
-      x: {
-        ticks: { maxRotation: 0, font: { size: 10 } },
-      },
-      y: {
-        ticks: { font: { size: 10 } },
-      },
-    },
-  },
-});
+// Carica storico da Firebase
+async function caricaStorico() {
+  const res = await fetch(URL_STORICO);
+  const data = await res.json();
 
-// Funzione per aggiornare i valori
-async function aggiorna() {
+  if (!data) return [];
+
+  // Converti oggetti Firebase in array ordinato
+  const arr = Object.values(data).sort((a, b) => a.timestamp - b.timestamp);
+
+  return arr;
+}
+
+// Aggiorna valori attuali
+async function aggiornaValori() {
   try {
-    const response = await fetch(FIREBASE_URL);
-    const data = await response.json();
+    const res = await fetch(URL_ATTUALE);
+    const data = await res.json();
 
-    // Aggiorna valori numerici
     document.getElementById("temp").innerText = data.temperature + " °C";
     document.getElementById("hum").innerText = data.humidity + " %";
     document.getElementById("press").innerText = data.pressure + " hPa";
-
-    const now = Date.now();
-
-    // Registra un punto ogni 30 minuti
-    if (now - lastSaveTime >= 1800000) {
-      lastSaveTime = now;
-
-      const timeLabel = new Date().toLocaleString("it-IT", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-      // --- 48 ORE ---
-      labels48.push(timeLabel);
-      temp48.push(data.temperature);
-      hum48.push(data.humidity);
-      press48.push(data.pressure);
-
-      if (labels48.length > 96) {
-        labels48.shift();
-        temp48.shift();
-        hum48.shift();
-        press48.shift();
-      }
-
-      // --- 7 GIORNI ---
-      labels7.push(timeLabel);
-      temp7.push(data.temperature);
-      hum7.push(data.humidity);
-      press7.push(data.pressure);
-
-      if (labels7.length > 336) {
-        labels7.shift();
-        temp7.shift();
-        hum7.shift();
-        press7.shift();
-      }
-    }
   } catch (e) {
-    console.log("Errore:", e);
+    console.log("Errore lettura valori:", e);
   }
 }
 
-setInterval(aggiorna, 5000);
-aggiorna();
+// Crea grafico
+async function creaGrafico(rangeOre) {
+  const storico = await caricaStorico();
+  if (storico.length === 0) return;
 
-// --- Pulsanti ---
+  const cutoff = Date.now() - rangeOre * 3600 * 1000;
+
+  const filtrati = storico.filter((p) => p.timestamp >= cutoff);
+
+  const labels = filtrati.map((p) =>
+    new Date(p.timestamp).toLocaleString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+    })
+  );
+
+  const temp = filtrati.map((p) => p.temperature);
+  const hum = filtrati.map((p) => p.humidity);
+  const press = filtrati.map((p) => p.pressure);
+
+  if (chart) chart.destroy();
+
+  const ctx = document.getElementById("meteoChart");
+
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Temperatura (°C)",
+          data: temp,
+          borderColor: "red",
+          borderWidth: 2,
+          tension: 0.3,
+        },
+        {
+          label: "Umidità (%)",
+          data: hum,
+          borderColor: "blue",
+          borderWidth: 2,
+          tension: 0.3,
+        },
+        {
+          label: "Pressione (hPa)",
+          data: press,
+          borderColor: "green",
+          borderWidth: 2,
+          tension: 0.3,
+        },
+      ],
+    },
+    options: {
+      layout: { padding: 5 },
+      plugins: {
+        legend: {
+          labels: { boxWidth: 10, font: { size: 11 } },
+        },
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, maxRotation: 0 } },
+        y: { ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+// Pulsanti
 function mostra48h() {
-  meteoChart.data.labels = labels48;
-  meteoChart.data.datasets[0].data = temp48;
-  meteoChart.data.datasets[1].data = hum48;
-  meteoChart.data.datasets[2].data = press48;
-  meteoChart.update();
+  creaGrafico(48);
 }
 
 function mostra7giorni() {
-  meteoChart.data.labels = labels7;
-  meteoChart.data.datasets[0].data = temp7;
-  meteoChart.data.datasets[1].data = hum7;
-  meteoChart.data.datasets[2].data = press7;
-  meteoChart.update();
+  creaGrafico(24 * 7);
 }
+
+// Aggiornamento automatico valori
+setInterval(aggiornaValori, 5000);
+aggiornaValori();
+
+// Carica grafico iniziale
+creaGrafico(48);
