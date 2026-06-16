@@ -44,6 +44,27 @@ const meteoChart = new Chart(ctx, {
                 tension: 0.3
             }
         ]
+    },
+    options: {
+        layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
+        },
+        plugins: {
+            legend: {
+                labels: {
+                    boxWidth: 10,
+                    font: { size: 11 }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { maxRotation: 0, font: { size: 10 } }
+            },
+            y: {
+                ticks: { font: { size: 10 } }
+            }
+        }
     }
 });
 
