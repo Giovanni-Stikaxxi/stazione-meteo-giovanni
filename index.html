@@ -1,106 +1,145 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+const FIREBASE_URL = "https://stazione-meteo-giovanni-default-rtdb.europe-west1.firebasedatabase.app/meteo.json";
 
-<title>Stazione Meteo Giovanni</title>
+// Storico 48 ore (96 punti)
+let labels48 = [];
+let temp48 = [];
+let hum48 = [];
+let press48 = [];
 
-<!-- Icona app -->
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+// Storico 7 giorni (336 punti)
+let labels7 = [];
+let temp7 = [];
+let hum7 = [];
+let press7 = [];
 
-<!-- Modalità app a schermo intero su iPhone -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+// Ultimo salvataggio
+let lastSaveTime = 0;
 
-<style>
-    body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-        background: #f2f2f7;
-        text-align: center;
-        padding-top: 20px;
+// Grafico unico
+const ctx = document.getElementById("meteoChart");
+const meteoChart = new Chart(ctx, {
+    type: "line",
+    data: {
+        labels: labels48,
+        datasets: [
+            {
+                label: "Temperatura (°C)",
+                data: temp48,
+                borderColor: "red",
+                borderWidth: 2,
+                tension: 0.3
+            },
+            {
+                label: "Umidità (%)",
+                data: hum48,
+                borderColor: "blue",
+                borderWidth: 2,
+                tension: 0.3
+            },
+            {
+                label: "Pressione (hPa)",
+                data: press48,
+                borderColor: "green",
+                borderWidth: 2,
+                tension: 0.3
+            }
+        ]
+    },
+    options: {
+        layout: {
+            padding: { top: 5, bottom: 5, left: 0, right: 0 }
+        },
+        plugins: {
+            legend: {
+                labels: {
+                    boxWidth: 10,
+                    font: { size: 11 }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { maxRotation: 0, font: { size: 10 } }
+            },
+            y: {
+                ticks: { font: { size: 10 } }
+            }
+        }
     }
+});
 
-    h1 {
-        font-size: 26px;
-        margin-bottom: 10px;
+// Funzione per aggiornare i valori
+async function aggiorna() {
+    try {
+        const response = await fetch(FIREBASE_URL);
+        const data = await response.json();
+
+        // Aggiorna valori numerici
+        document.getElementById("temp").innerText = data.temperature + " °C";
+        document.getElementById("hum").innerText  = data.humidity + " %";
+        document.getElementById("press").innerText = data.pressure + " hPa";
+
+        const now = Date.now();
+
+        // Registra un punto ogni 30 minuti
+        if (now - lastSaveTime >= 1800000) {
+            lastSaveTime = now;
+
+            const timeLabel = new Date().toLocaleString("it-IT", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+
+            // --- 48 ORE ---
+            labels48.push(timeLabel);
+            temp48.push(data.temperature);
+            hum48.push(data.humidity);
+            press48.push(data.pressure);
+
+            if (labels48.length > 96) {
+                labels48.shift();
+                temp48.shift();
+                hum48.shift();
+                press48.shift();
+            }
+
+            // --- 7 GIORNI ---
+            labels7.push(timeLabel);
+            temp7.push(data.temperature);
+            hum7.push(data.humidity);
+            press7.push(data.pressure);
+
+            if (labels7.length > 336) {
+                labels7.shift();
+                temp7.shift();
+                hum7.shift();
+                press7.shift();
+            }
+        }
+
+    } catch (e) {
+        console.log("Errore:", e);
     }
+}
 
-    .card {
-        background: white;
-        margin: 15px auto;
-        padding: 20px;
-        width: 80%;
-        max-width: 350px;
-        border-radius: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
+setInterval(aggiorna, 5000);
+aggiorna();
 
-    .value {
-        font-size: 36px;
-        font-weight: 600;
-        margin-top: 10px;
-    }
+// --- Pulsanti ---
+function mostra48h() {
+    meteoChart.data.labels = labels48;
+    meteoChart.data.datasets[0].data = temp48;
+    meteoChart.data.datasets[1].data = hum48;
+    meteoChart.data.datasets[2].data = press48;
+    meteoChart.update();
+}
 
-    .label {
-        font-size: 18px;
-        color: #666;
-    }
-
-    button {
-        padding: 10px 20px;
-        margin: 5px;
-        border: none;
-        border-radius: 10px;
-        background: #007aff;
-        color: white;
-        font-size: 16px;
-        cursor: pointer;
-    }
-
-    button:hover {
-        background: #005fcc;
-    }
-</style>
-</head>
-
-<body>
-
-<h1>Stazione Meteo Giovanni</h1>
-
-<!-- Valori attuali -->
-<div class="card">
-    <div class="label">Temperatura</div>
-    <div id="temp" class="value">-- °C</div>
-</div>
-
-<div class="card">
-    <div class="label">Umidità</div>
-    <div id="hum" class="value">-- %</div>
-</div>
-
-<div class="card">
-    <div class="label">Pressione</div>
-    <div id="press" class="value">-- hPa</div>
-</div>
-
-<!-- Pulsanti grafici -->
-<h2>Andamento Meteo</h2>
-
-<div>
-    <button onclick="mostra48h()">Ultime 48 ore</button>
-    <button onclick="mostra7giorni()">Ultima settimana</button>
-</div>
-
-<!-- Grafico unico -->
-<canvas id="meteoChart" width="400" height="180"></canvas>
-
-<!-- Libreria grafici -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- Script principale -->
-<script src="script.js"></script>
-
-</body>
-</html>
+function mostra7giorni() {
+    meteoChart.data.labels = labels7;
+    meteoChart.data.datasets[0].data = temp7;
+    meteoChart.data.datasets[1].data = hum7;
+    meteoChart.data.datasets[2].data = press7;
+    meteoChart.update();
+}
