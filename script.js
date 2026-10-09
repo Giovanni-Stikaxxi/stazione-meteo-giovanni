@@ -1,295 +1,252 @@
-// =====================================================
-// FIREBASE
-// =====================================================
-
-const FIREBASE_BASE =
+const FIREBASE_URL =
 "https://stazione-meteo-giovanni-default-rtdb.europe-west1.firebasedatabase.app";
 
-const URL_ATTUALE =
-FIREBASE_BASE + "/meteo.json";
+let chart;
 
-const URL_STORICO =
-FIREBASE_BASE + "/storico.json";
+// ==========================
+// DATI ATTUALI
+// ==========================
 
-// =====================================================
-// GRAFICO
-// =====================================================
-
-let chart = null;
-
-// =====================================================
-// LETTURA STORICO
-// =====================================================
-
-async function caricaStorico() {
+async function aggiornaMeteo() {
 
     try {
 
-        const res = await fetch(URL_STORICO);
-        const data = await res.json();
+        const response =
+            await fetch(`${FIREBASE_URL}/meteo.json`);
 
-        if (!data) return [];
-
-        let storico = [];
-
-        Object.keys(data).forEach(giorno => {
-
-            const records = data[giorno];
-
-            Object.keys(records).forEach(key => {
-                storico.push(records[key]);
-            });
-
-        });
-
-        storico.sort((a, b) => a.timestamp - b.timestamp);
-
-        return storico;
-
-    } catch (err) {
-
-        console.error(
-            "Errore lettura storico:",
-            err
-        );
-
-        return [];
-    }
-}
-
-// =====================================================
-// VALORI ATTUALI
-// =====================================================
-
-async function aggiornaValori() {
-
-    try {
-
-        const res = await fetch(URL_ATTUALE);
-        const data = await res.json();
+        const data =
+            await response.json();
 
         if (!data) return;
 
-        document.getElementById("temp").innerText =
-            Number(data.temperature).toFixed(1) + " °C";
+        document.getElementById("temp").innerHTML =
+            `${data.temperature.toFixed(1)} °C`;
 
-        document.getElementById("hum").innerText =
-            Number(data.humidity).toFixed(1) + " %";
+        document.getElementById("hum").innerHTML =
+            `${data.humidity.toFixed(1)} %`;
 
-        document.getElementById("press").innerText =
-            Number(data.pressure).toFixed(1) + " hPa";
-
-        const lastUpdate =
-            document.getElementById("lastUpdate");
-
-        if (lastUpdate) {
-
-            lastUpdate.innerText =
-                (data.date || "") +
-                " " +
-                (data.time || "");
-
-        }
+        document.getElementById("press").innerHTML =
+            `${data.pressure.toFixed(1)} hPa`;
 
     } catch (err) {
 
-        console.error(
-            "Errore lettura valori:",
-            err
-        );
+        console.error(err);
 
     }
 }
 
-// =====================================================
-// CREAZIONE GRAFICO
-// =====================================================
+// ==========================
+// CARICAMENTO STORICO
+// ==========================
 
-async function creaGrafico(rangeOre) {
+async function caricaStoricoGiorno(data) {
 
-    const storico = await caricaStorico();
-
-    if (storico.length === 0) {
-
-        console.log("Nessun dato storico");
-
-        return;
-    }
-
-    const cutoff =
-        Date.now() -
-        (rangeOre * 3600 * 1000);
-
-    const filtrati =
-        storico.filter(
-            item => item.timestamp >= cutoff
+    const response =
+        await fetch(
+            `${FIREBASE_URL}/storico/${data}.json`
         );
 
-    if (filtrati.length === 0) {
+    return await response.json();
 
-        console.log("Nessun dato nel range");
+}
 
-        return;
-    }
+// ==========================
+// ULTIME 48 ORE
+// ==========================
 
-    const labels = filtrati.map(item => {
+async function mostra48h() {
 
-        return new Date(item.timestamp)
-            .toLocaleString(
-                "it-IT",
-                {
-                    day: "2-digit",
-                    month: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                }
+    const labels = [];
+    const temperature = [];
+
+    const oggi = new Date();
+
+    for (let i = 1; i >= 0; i--) {
+
+        const giorno = new Date();
+
+        giorno.setDate(
+            oggi.getDate() - i
+        );
+
+        const dataString =
+            giorno
+            .toISOString()
+            .split("T")[0];
+
+        const storico =
+            await caricaStoricoGiorno(
+                dataString
             );
 
-    });
+        if (!storico)
+            continue;
 
-    const temperature =
-        filtrati.map(
-            item => item.temperature
-        );
+        Object.values(storico)
+            .forEach(record => {
 
-    const humidity =
-        filtrati.map(
-            item => item.humidity
-        );
+                const ora =
+                    new Date(
+                        record.timestamp
+                    )
+                    .toLocaleString("it-IT", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                    });
 
-    const pressure =
-        filtrati.map(
-            item => item.pressure
-        );
+                labels.push(ora);
 
-    if (chart) {
-        chart.destroy();
+                temperature.push(
+                    record.temperature
+                );
+
+            });
     }
 
-    const ctx =
-        document.getElementById(
-            "meteoChart"
+    disegnaGrafico(
+        labels,
+        temperature,
+        "Temperatura ultime 48 ore"
+    );
+}
+
+// ==========================
+// ULTIMI 7 GIORNI
+// ==========================
+
+async function mostra7giorni() {
+
+    const labels = [];
+    const temperature = [];
+
+    const oggi = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+
+        const giorno = new Date();
+
+        giorno.setDate(
+            oggi.getDate() - i
         );
 
-    chart = new Chart(ctx, {
+        const dataString =
+            giorno
+            .toISOString()
+            .split("T")[0];
 
-        type: "line",
+        const storico =
+            await caricaStoricoGiorno(
+                dataString
+            );
 
-        data: {
+        if (!storico)
+            continue;
 
-            labels: labels,
+        const valori =
+            Object.values(storico);
 
-            datasets: [
+        if (valori.length === 0)
+            continue;
 
-                {
-                    label: "Temperatura (°C)",
-                    data: temperature,
-                    borderColor: "#ff3b30",
-                    backgroundColor: "#ff3b30",
-                    borderWidth: 2,
+        let somma = 0;
+
+        valori.forEach(v => {
+
+            somma +=
+                v.temperature;
+
+        });
+
+        const media =
+            somma / valori.length;
+
+        labels.push(dataString);
+
+        temperature.push(
+            media.toFixed(1)
+        );
+    }
+
+    disegnaGrafico(
+        labels,
+        temperature,
+        "Temperatura media ultimi 7 giorni"
+    );
+}
+
+// ==========================
+// DISEGNO GRAFICO
+// ==========================
+
+function disegnaGrafico(
+    labels,
+    data,
+    titolo
+) {
+
+    const ctx =
+        document
+        .getElementById("meteoChart");
+
+    if (chart)
+        chart.destroy();
+
+    chart =
+        new Chart(ctx, {
+
+            type: "line",
+
+            data: {
+
+                labels: labels,
+
+                datasets: [{
+
+                    label: titolo,
+
+                    data: data,
+
+                    borderColor:
+                        "#007aff",
+
+                    backgroundColor:
+                        "rgba(0,122,255,0.2)",
+
                     tension: 0.3,
-                    pointRadius: 0
-                },
 
-                {
-                    label: "Umidità (%)",
-                    data: humidity,
-                    borderColor: "#007aff",
-                    backgroundColor: "#007aff",
-                    borderWidth: 2,
-                    tension: 0.3,
-                    pointRadius: 0
-                },
+                    fill: true
 
-                {
-                    label: "Pressione (hPa)",
-                    data: pressure,
-                    borderColor: "#34c759",
-                    backgroundColor: "#34c759",
-                    borderWidth: 2,
-                    tension: 0.3,
-                    pointRadius: 0
-                }
-
-            ]
-        },
-
-        options: {
-
-            responsive: true,
-
-            maintainAspectRatio: false,
-
-            interaction: {
-                mode: "index",
-                intersect: false
+                }]
             },
 
-            plugins: {
+            options: {
 
-                legend: {
-                    display: true,
-                    labels: {
-                        boxWidth: 10,
-                        font: {
-                            size: 11
-                        }
-                    }
-                }
+                responsive: true,
 
-            },
+                plugins: {
 
-            scales: {
-
-                x: {
-
-                    ticks: {
-                        maxRotation: 0,
-                        font: {
-                            size: 10
-                        }
-                    }
-
-                },
-
-                y: {
-
-                    ticks: {
-                        font: {
-                            size: 10
-                        }
+                    legend: {
+                        display: true
                     }
 
                 }
 
             }
 
-        }
-
-    });
+        });
 }
 
-// =====================================================
-// PULSANTI
-// =====================================================
-
-function mostra48h() {
-    creaGrafico(48);
-}
-
-function mostra7giorni() {
-    creaGrafico(24 * 7);
-}
-
-// =====================================================
+// ==========================
 // AVVIO
-// =====================================================
+// ==========================
 
-aggiornaValori();
+aggiornaMeteo();
 
 setInterval(
-    aggiornaValori,
-    5000
+    aggiornaMeteo,
+    30000
 );
 
-creaGrafico(48);
+mostra48h();
